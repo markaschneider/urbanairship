@@ -50,7 +50,7 @@ module Urbanairship
 
     def push(options = {})
       body = parse_push_options(options.dup).to_json
-      do_request(:post, "/api/push/", :body => body, :authenticate_with => :master_secret, :version => options[:version])
+      do_request(:post, "/api/push/", :body => body, :authenticate_with => :master_secret, :version => options[:version], :credentials_set => options[:credentials_set])
     end
 
     def push_to_segment(options = {})
@@ -132,12 +132,16 @@ module Urbanairship
     private
 
     def do_request(http_method, path, options = {})
-      verify_configuration_values(:application_key, options[:authenticate_with])
-
+      verify_configuration_values(:application_key, options[:authenticate_with]) if options[:credentials_set].nil?
       klass = Net::HTTP.const_get(http_method.to_s.capitalize)
 
       request = klass.new(path)
-      request.basic_auth @application_key, instance_variable_get("@#{options[:authenticate_with]}")
+
+      app_key, app_pw = credentials_to_use(options[:credentials_set], options[:authenticate_with])
+      request.basic_auth app_key, app_pw
+      options.delete(:credentials_set)
+#      request.basic_auth @application_key, instance_variable_get("@#{options[:authenticate_with]}")
+
       request.add_field "Content-Type", options[:content_type] || "application/json"
       request.body = options[:body] if options[:body]
       request["Accept"] = "application/vnd.urbanairship+json; version=#{options[:version]};"  if options[:version]
@@ -153,6 +157,14 @@ module Urbanairship
         logger.error "Urbanairship request timed out after #{request_timeout} seconds: [#{http_method} #{request.path} #{request.body}]"
       end
       Urbanairship::Response.wrap(nil, :body => {'error' => 'Request timeout'}, :code => '503')
+    end
+
+    def credentials_to_use(credentials_set, authenticate_with)
+      if credentials_set.nil?
+        return @application_key, instance_variable_get("@#{authenticate_with}")
+      else
+        return credentials_set[:authentication_key], credentials_set[authenticate_with]
+      end
     end
 
     def verify_configuration_values(*symbols)
@@ -173,6 +185,7 @@ module Urbanairship
       hash[:aliases] = hash[:aliases].map{|a| a.to_s} unless hash[:aliases].nil?
       hash[:schedule_for] = hash[:schedule_for].map{|elem| process_scheduled_elem(elem)} unless hash[:schedule_for].nil?
       hash.delete(:version)
+      hash.delete(:credentials_set)
       hash
     end
 
@@ -211,3 +224,4 @@ module Urbanairship
     include ClassMethods
   end
 end
+#nh = NotificationCenter::NotificationHandler.new('Mark'); nh.new_relationship_created(3689044076)
