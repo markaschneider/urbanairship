@@ -1,3 +1,6 @@
+lib = File.expand_path('../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+
 Gem::Specification.new do |s|
   s.name = 'urbanairship'
   s.license = 'BSD'
@@ -8,8 +11,8 @@ Gem::Specification.new do |s|
   s.homepage = 'http://github.com/groupon/urbanairship'
   s.authors = ['Groupon, Inc.']
   s.email = ['rubygems@groupon.com']
-  s.files = FileList['README.md', 'LICENSE', 'Rakefile', 'lib/**/*.rb'].to_a
-  s.test_files = FileList['spec/**/*.rb'].to_a
+  s.files = `git ls-files`.split("\n")
+  #s.test_files = FileList['spec/**/*.rb'].to_a
 
   s.add_dependency 'json'
 
